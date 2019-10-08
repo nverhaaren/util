@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+
+from util.record_param.lemma import find_nested_index, at_nested_index
 from .control import is_active
 import inspect
 
@@ -34,25 +36,25 @@ def annotate(argname, attrset):
             fn_str = repr(effective_fn)
 
         try:
-            # TODO: currently only handles non-nested arg lists
-            index = argspec.args.index(argname)
+            nested_idx = find_nested_index(argspec.args, argname)
         except ValueError:
             raise TypeError('{} has no argument {}'.format(fn_str, argname))
 
         earliest_default_index = len(argspec.args) - len(argspec.defaults or ())
 
-        default_index = index - earliest_default_index
+        default_index = list(nested_idx)
+        default_index[0] -= earliest_default_index
 
         if default_index >= 0:
-            _verify(argspec.defaults[default_index], attrset,
+            _verify(at_nested_index(argspec.defaults, default_index), attrset,
                     '{fn}: default value for {argname} ({{arg}}) is missing {{missing}}'.format(
                         fn=fn_str, argname=argname))
 
         def wrapper(*args, **kwargs):
             error_message_template = '{fn}: {argname} ({{arg}}) is missing {{missing}}'.format(
                 fn=fn_str, argname=argname)
-            if len(args) > index:
-                _verify(args[index], attrset, error_message_template)
+            if len(args) > nested_idx[0]:
+                _verify(at_nested_index(args, nested_idx), attrset, error_message_template)
             elif argname in kwargs:
                 _verify(kwargs[argname], attrset, error_message_template)
 
@@ -63,4 +65,3 @@ def annotate(argname, attrset):
         return wrapper
 
     return functor
-
