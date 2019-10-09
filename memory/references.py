@@ -6,19 +6,19 @@ def _get_all_refs(ref_fn, objs, filter_fn=None, ignore_ids=frozenset(), max_dept
     assert max_depth is None or max_depth >= 0
     assert max_count is None or max_count >= 0
     refs = []
-    current_generation = list(objs)
+    current_generation = {id(obj): obj for obj in objs}.values()
     current_depth = 0
     ignore_ids = set(ignore_ids) | {id(refs), id(current_generation), id(_get_all_refs)}
 
-    def caching_predicate_(obj):
-        if id(obj) in ignore_ids:
+    def caching_predicate_(obj_):
+        if id(obj_) in ignore_ids:
             return False
         if filter_fn is None:
             return True
 
-        if filter_fn(obj):
+        if filter_fn(obj_):
             return True
-        ignore_ids.add(id(obj))
+        ignore_ids.add(id(obj_))
         return False
 
     ignore_ids.add(id(caching_predicate_))
