@@ -45,7 +45,7 @@ class SimpleLRUCache(MutableMapping):
             return new
 
     def __init__(self, size):
-        assert self._size > 0
+        assert size > 0
         self._size = size
         self._hash = {}
         self._dllist_head = self.Node.head()
@@ -111,11 +111,17 @@ def memoize_lru(lru_cache):
         raise TypeError('Argument to memoize_lru must be MutableMapping; cannot decorate a function directly')
 
     def decorator(f):
-        @functools.wraps(f)
         def wrapper(*args, **kwargs):
             key = (args, frozenset((k, kwargs[k]) for k in sorted(kwargs)))
             if key not in lru_cache:
                 lru_cache[key] = f(*args, **kwargs)
             return lru_cache[key]
+
+        # noinspection PyBroadException
+        try:
+            wrapper = functools.wraps(f)(wrapper)
+        except Exception:
+            # This is really a nice to have, not worth an error if it fails for any reason (e.g. partial)
+            pass
         return wrapper
     return decorator
