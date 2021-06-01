@@ -50,6 +50,15 @@ class SimpleLRUCache(MutableMapping):
         self._hash = {}
         self._dllist_head = self.Node.head()
 
+        self._on_add = set()
+        self._on_remove = set()
+
+    def add_add_callback(self, cb):
+        self._on_add.add(cb)
+
+    def add_remove_callback(self, cb):
+        self._on_remove.add(cb)
+
     def __setitem__(self, key, value):
         assert key is not self._Head
         if key in self._hash:
@@ -60,13 +69,19 @@ class SimpleLRUCache(MutableMapping):
             return
         if len(self._hash) == self._size:
             last = self._dllist_head.prv
+            for cb in self._on_remove:
+                cb(last.key, last.value)
             del self._hash[last.key]
             last.unlink()
         new = self._dllist_head.nxt.insert_ahead(key, value)
+        for cb in self._on_add:
+            cb(new.key, new.value)
         self._hash[key] = new
 
     def __delitem__(self, key):
         node = self._hash[key]
+        for cb in self._on_remove:
+            cb(node.key, node.value)
         node.unlink()
         del self._hash[key]
 
